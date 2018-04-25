@@ -1,0 +1,174 @@
+Sub Planilla_Historica()
+
+'Elimina el grafico P anterior que estuviera guardado
+For i = 1 To Worksheets.Count
+    If Worksheets(i).Name = "Planilla_Historica" Then
+    Sheets("Planilla_Historica").Select
+    Application.DisplayAlerts = False
+    ActiveWindow.SelectedSheets.Delete
+    Application.DisplayAlerts = True
+
+    Exit For
+    End If
+Next
+Worksheets.Add.Name = "Planilla_Historica"
+
+    Dim SummarySheet As Worksheet
+    Dim FolderPath As String
+    Dim SelectedFiles() As Variant
+    Dim NRow As Long
+    Dim FileName As String
+    Dim NFile As Long
+    Dim WorkBk As Workbook
+    Dim SourceRange As Range
+    Dim DestRange As Range
+     Dim LastRow As Long
+
+    ' Create a new workbook and set a variable to the first sheet.
+    Set SummarySheet = Workbooks.Add(xlWBATWorksheet).Worksheets(1)
+
+    ' Modify this folder path to point to the files you want to use.
+    FolderPath = "C:\Users\Gonzalo\Google Drive\Respaldo\practica\Entregables"
+
+    ' Set the current directory to the the folder path.
+    ChDrive FolderPath
+    ChDir FolderPath
+
+    ' Open the file dialog box and filter on Excel files, allowing multiple files
+    ' to be selected.
+    SelectedFiles = Application.GetOpenFilename( _
+        filefilter:="Excel Files (*.xlsm*), *.xlsm*", MultiSelect:=True)
+
+    ' NRow keeps track of where to insert new rows in the destination workbook.
+    NRow = 1
+
+    ' Loop through the list of returned file names
+    For NFile = LBound(SelectedFiles) To UBound(SelectedFiles)
+        ' Set FileName to be the current workbook file name to open.
+        FileName = SelectedFiles(NFile)
+
+        ' Open the current workbook.
+        Set WorkBk = Workbooks.Open(FileName)
+
+        ' Set the cell in column A to be the file name.
+        SummarySheet.Range("A" & NRow).Value = FileName
+
+        ' Set the source range to be A9 through C9.
+        ' Modify this range for your workbooks. It can span multiple rows.
+           LastRow = WorkBk.Worksheets(1).Cells.Find(What:="*", _
+                 After:=WorkBk.Worksheets(1).Cells.Range("A1"), _
+                 SearchDirection:=xlPrevious, _
+                 LookIn:=xlFormulas, _
+                 SearchOrder:=xlByRows).Row
+    Set SourceRange = WorkBk.Worksheets(1).Range("B8:L" & LastRow)
+
+        ' Set the destination range to start at column B and be the same size as the source range.
+        Set DestRange = SummarySheet.Range("B" & NRow)
+        Set DestRange = DestRange.Resize(SourceRange.Rows.Count, _
+           SourceRange.Columns.Count)
+
+        ' Copy over the values from the source to the destination.
+        DestRange.Value = SourceRange.Value
+
+        ' Increase NRow so that we know where to copy data next.
+        NRow = NRow + DestRange.Rows.Count
+
+        ' Close the source workbook without saving changes.
+        WorkBk.Close savechanges:=False
+    Next NFile
+
+
+
+
+
+
+'Copia datos del libro nuevo al libro de graficos de contro historicos
+ActiveWorkbook.Sheets(1).Activate
+g = WorksheetFunction.CountA(Range("B:B"))
+ActiveSheet.Range(Cells(1, 1), Cells(g, 12)).Copy
+Workbooks("Graficos_de_Control_Historicos.xlsm").Worksheets("Planilla_Historica").Activate
+Range(Cells(2, 1), Cells(g, 12)).PasteSpecial xlPasteValues
+
+    Range("B1").Select
+    Application.CutCopyMode = False
+    ActiveCell.FormulaR1C1 = "N°"
+    Range("C1").Select
+    ActiveCell.FormulaR1C1 = "Hora"
+    Range("D1").Select
+    ActiveCell.FormulaR1C1 = "Producto"
+    Range("E1").Select
+    ActiveCell.FormulaR1C1 = "Promedio"
+    Range("F1").Select
+    ActiveCell.FormulaR1C1 = "¿Aprueba Espesor? (Si=0 No=1)"
+    Range("G1").Select
+    ActiveCell.FormulaR1C1 = "Promedio"
+    Range("H1").Select
+    ActiveCell.FormulaR1C1 = "¿Aprueba Largo? (Si=0 No=1)"
+    Range("I1").Select
+    ActiveCell.FormulaR1C1 = "Promedio"
+    Range("J1").Select
+    ActiveCell.FormulaR1C1 = "¿Aprueba Descuadre? (Si=0 No=1)"
+    Range("K1").Select
+    ActiveCell.FormulaR1C1 = "¿Aprueba Mordedura? (Si=0 No=1)"
+    Range("L1").Select
+    ActiveCell.FormulaR1C1 = "¿Producto Rechazado? (Si=1 No=0)"
+    Range("B1:L1").Select
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorLight1
+        .TintAndShade = 0.349986266670736
+        .PatternTintAndShade = 0
+    End With
+    Selection.Font.Bold = True
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorLight1
+        .TintAndShade = 0.349986266670736
+        .PatternTintAndShade = 0
+    End With
+    With Selection.Font
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+    End With
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlBottom
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    Columns("F:F").ColumnWidth = 15.57
+    Columns("F:F").ColumnWidth = 16.71
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlBottom
+        .WrapText = True
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    Columns("F:F").ColumnWidth = 15.57
+    Columns("G:G").ColumnWidth = 13.29
+    Columns("K:K").ColumnWidth = 14.14
+    Rows("1:1").RowHeight = 42.75
+    Columns("H:H").ColumnWidth = 13.71
+    Columns("H:H").ColumnWidth = 16.43
+
+
+End Sub

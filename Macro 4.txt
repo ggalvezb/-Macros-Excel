@@ -1,0 +1,180 @@
+Sub Crador_Cusum_ancho_historico()
+Application.ScreenUpdating = False
+'parametros del CUSUM
+k = 0.25
+h = 0.327
+' Borra el grafico CUSUM anteriormente guardado
+For i = 1 To Worksheets.Count
+    If Worksheets(i).Name = "Grafica_CUSUM_ancho" Then
+    Sheets("Grafica_CUSUM_ancho").Select
+    Application.DisplayAlerts = False
+    ActiveWindow.SelectedSheets.Delete
+    Application.DisplayAlerts = True
+
+    Exit For
+    End If
+Next
+Worksheets.Add.Name = "Grafica_CUSUM_ancho"
+ActiveWorkbook.Sheets("Planilla_Historica").Activate
+
+g = WorksheetFunction.CountA(Range("D:D"))
+
+' Borra y crea la hoja donde estaran los datos del grafico CUSUM
+For i = 1 To Worksheets.Count
+    If Worksheets(i).Name = "Datos_CUSUM_ancho" Then
+    Sheets("Datos_CUSUM_ancho").Select
+    Application.DisplayAlerts = False
+    ActiveWindow.SelectedSheets.Delete
+    Application.DisplayAlerts = True
+
+    Exit For
+    End If
+Next
+Worksheets.Add.Name = "Datos_CUSUM_ancho"
+
+'Copia datos de espesor a hoja nueva
+ActiveWorkbook.Sheets("Planilla_Historica").Activate
+ActiveSheet.Range(Cells(7, 4), Cells(8 + g - 2, 4)).Copy
+ActiveWorkbook.Sheets("Datos_CUSUM_ancho").Activate
+Range(Cells(1, 1), Cells(g, 1)).PasteSpecial xlPasteValues
+
+
+ActiveWorkbook.Sheets("Planilla_Historica").Activate
+ActiveSheet.Range(Cells(7, 7), Cells(8 + g - 2, 7)).Copy
+ActiveWorkbook.Sheets("Datos_CUSUM_ancho").Activate
+Range(Cells(1, 2), Cells(g, 2)).PasteSpecial xlPasteAll
+
+'Elimina productos sin medidas de ancho
+g = WorksheetFunction.CountA(Range("A:A"))
+a = 2
+Do While a < g + 1
+    Set Dato = Worksheets("Lista_de_Productos").Range("A:A").Find(Worksheets("Datos_CUSUM_ancho").Cells(a, 1).Value, LookIn:=xlValues, LookAt:=xlWhole)
+    ActiveWorkbook.Sheets("Lista_de_Productos").Activate
+    p = Cells(Dato.Row, Dato.Column + 2)
+    ActiveWorkbook.Sheets("Datos_CUSUM_ancho").Activate
+    If p = 0 Then
+        Rows(a).EntireRow.Delete
+        a = a - 1
+        g = g - 1
+    Else
+    End If
+    a = a + 1
+Loop
+
+'Agrega las medidas objetivos de cada producto
+g = WorksheetFunction.CountA(Range("A:A"))
+a = 2
+Do While a < g + 1
+    Set Dato = Worksheets("Lista_de_Productos").Range("A:A").Find(Worksheets("Datos_CUSUM_ancho").Cells(a, 1).Value, LookIn:=xlValues, LookAt:=xlWhole)
+        If Not Dato Is Nothing Then
+        filax = Dato.Row
+        columnax = Dato.Column
+        ActiveWorkbook.Sheets("Lista_de_Productos").Activate
+        Cells(filax, columnax + 2).Copy
+        ActiveWorkbook.Sheets("Datos_CUSUM_ancho").Activate
+        Cells(a, 3).PasteSpecial xlPasteAll
+        Cells(a, 4) = Cells(a, 2) - Cells(a, 3)
+        a = a + 1
+        Else
+        End If
+Loop
+
+'creador de las muestra y del SH y SL
+g = WorksheetFunction.CountA(Range("B:B"))
+i = 0
+a = 2
+b = 2
+j = 1
+n = (g / 3)
+Do While j < n
+Cells(a, 5) = j
+Cells(a + 1, 5) = j + 1
+Cells(a + 2, 5) = j + 2
+    Do While i < 3
+    Cells(a, 6) = Cells(a, 6) + Cells(b, 4)
+    b = b + 1
+    i = i + 1
+    Loop
+    Cells(a, 6) = Cells(a, 6) / 3
+    If a = 2 Then
+        Cells(a, 7) = Application.WorksheetFunction.Max(0, Cells(a, 6) - k)
+    Else
+         Cells(a, 7) = Application.WorksheetFunction.Max(0, Cells(a, 6) - k + Cells(a - 1, 7))
+    End If
+        If a = 2 Then
+        Cells(a, 8) = -Application.WorksheetFunction.Max(0, -k - Cells(a, 6))
+    Else
+         Cells(a, 8) = Application.WorksheetFunction.Max(0, -k - Cells(a, 6) + Cells(a - 1, 7))
+         Cells(a, 8) = -Cells(a, 8)
+    End If
+Cells(a, 9) = h
+Cells(a + 1, 9) = h
+Cells(a + 2, 9) = h
+Cells(a, 10) = -h
+Cells(a + 1, 10) = -h
+Cells(a + 2, 10) = -h
+Cells(1, 7) = "Desviación Positiva"
+Cells(1, 8) = "Desviación Negativa"
+Cells(1, 9) = "Limite Superior"
+Cells(1, 10) = "Limite Inferior"
+i = 0
+a = a + 1
+j = j + 1
+Loop
+
+'Crea la grafica CUSUM
+Dim grafico As ChartObject
+Dim wks As Worksheet
+Dim cht As Chart
+d = 7
+
+
+Set wks = ActiveWorkbook.Sheets("Datos_CUSUM_ancho")
+Set grafico = wks.ChartObjects.Add(Left:=20, Width:=400, Top:=50, Height:=200)
+grafico.Name = "Grafica_CUSUM_ancho"
+grafico.Chart.ChartType = xlXYScatterLines
+Set cht = ActiveWorkbook.Sheets("Datos_CUSUM_ancho").ChartObjects("Grafica_CUSUM_ancho").Chart
+For i = 1 To 4
+    cht.SeriesCollection.NewSeries.Select
+    With Selection
+        .Name = Cells(1, d)
+        .XValues = Range(Cells(2, 5), Cells(n + 1, 5))
+        .Values = Range(Cells(2, d), Cells(n + 1, d))
+        d = d + 1
+    End With
+Next i
+
+ActiveChart.ChartArea.Select
+ActiveChart.FullSeriesCollection(3).Select
+Selection.MarkerStyle = -4142
+ActiveChart.PlotArea.Select
+Selection.Format.Line.Visible = msoFalse
+Application.CommandBars("Format Object").Visible = False
+ActiveChart.FullSeriesCollection(4).Select
+Selection.MarkerStyle = -4142
+ActiveChart.PlotArea.Select
+Selection.Format.Line.Visible = msoFalse
+Application.CommandBars("Format Object").Visible = False
+
+'copia el grafico a hoja Grafico_CUSUM_espesor
+ActiveSheet.ChartObjects("Grafica_CUSUM_ancho").Activate
+Application.CutCopyMode = False
+ActiveChart.ChartArea.Copy
+Sheets("Grafica_CUSUM_ancho").Select
+Range("A1").Select
+ActiveSheet.Pictures.Paste.Select
+
+'Elimina la hoja auxiliar del grafico CUSUM ancho
+For i = 1 To Worksheets.Count
+    If Worksheets(i).Name = "Datos_CUSUM_ancho" Then
+    Sheets("Datos_CUSUM_ancho").Select
+    Application.DisplayAlerts = False
+    ActiveWindow.SelectedSheets.Delete
+    Application.DisplayAlerts = True
+
+    Exit For
+    End If
+Next
+Application.ScreenUpdating = True
+End Sub
+
